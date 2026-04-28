@@ -7,6 +7,7 @@ import aiohttp
 
 _process = psutil.Process()
 
+MAX_QUEUE = 100
 message_queue = []
 
 async def websocket_handler(request):
@@ -22,7 +23,9 @@ async def websocket_handler(request):
                     "content": msg.data,
                     "time": datetime.now().isoformat(),
                 })
-                await ws.send_str(f"Server received: '{msg.data}'")
+                if len(message_queue) > MAX_QUEUE:
+                    message_queue.pop(0)
+                await ws.send_str(f"Server received: '{msg.data} your message at {datetime.now().isoformat()}'")
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 print(f"WebSocket error: {ws.exception()}")
     finally:
@@ -39,10 +42,11 @@ async def poll_handler(_):
 async def metrics_handler(_):
     mem = _process.memory_info()
     return web.json_response({
-        "cpu_percent": _process.cpu_percent(interval=0.1),
+        "cpu_percent": _process.cpu_percent(interval=None),
         "ram_mb": round(mem.rss / 1024 / 1024, 2),
         "ram_percent": round(_process.memory_percent(), 2),
         "time": datetime.now().isoformat(),
+        "num_messages": len(message_queue),
     })
 
 async def main():

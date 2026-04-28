@@ -21,6 +21,7 @@ def poll_loop():
                 f"CPU: {metrics['cpu_percent']}%  "
                 f"RAM: {metrics['ram_mb']} MB ({metrics['ram_percent']}%)  "
                 f"| {len(msgs)} message(s)"
+                f" | Num in queue: {metrics['num_messages']}"
             )
             for m in msgs:
                 print(f"  [{m['source']}] {m['content']}")

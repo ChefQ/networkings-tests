@@ -17,7 +17,7 @@ async def connect_to_cloud():
         async with websockets.connect(uri) as websocket:
             print("Connected successfully!")
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             receiver = asyncio.create_task(receive_messages(websocket))
 
             while True:
