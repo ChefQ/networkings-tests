@@ -1,27 +1,67 @@
 import asyncio
-import websockets
 import os
+import psutil
+from datetime import datetime
+from aiohttp import web
+import aiohttp
 
-# This function handles the incoming WebSocket connection
-async def echo(websocket):
-    print("A client just connected!")
+_process = psutil.Process()
+
+message_queue = []
+
+async def websocket_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    print("WebSocket client connected!")
     try:
-        async for message in websocket:
-            print(f"Received from local laptop: {message}")
-            # Echo the message back to the client
-            await websocket.send(f"Cloud says: I received '{message}'")
-    except websockets.exceptions.ConnectionClosed:
-        print("Client disconnected.")
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                print(f"WebSocket received: {msg.data}")
+                message_queue.append({
+                    "source": "websocket",
+                    "content": msg.data,
+                    "time": datetime.now().isoformat(),
+                })
+                await ws.send_str(f"Server received: '{msg.data}'")
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                print(f"WebSocket error: {ws.exception()}")
+    finally:
+        print("WebSocket client disconnected.")
+    return ws
+
+async def poll_handler(_):
+    return web.json_response({
+        "status": "ok",
+        "time": datetime.now().isoformat(),
+        "messages": message_queue[-10:],
+    })
+
+async def metrics_handler(_):
+    mem = _process.memory_info()
+    return web.json_response({
+        "cpu_percent": _process.cpu_percent(interval=0.1),
+        "ram_mb": round(mem.rss / 1024 / 1024, 2),
+        "ram_percent": round(_process.memory_percent(), 2),
+        "time": datetime.now().isoformat(),
+    })
 
 async def main():
-    # Cloud providers assign a dynamic port, which they expose via the PORT environment variable.
-    # If it's not found (like when testing locally), it defaults to 8765.
     port = int(os.environ.get("PORT", 8765))
-    
-    # 0.0.0.0 binds the server to all available IP addresses, which is required for cloud hosting.
-    async with websockets.serve(echo, "0.0.0.0", port):
-        print(f"Cloud WebSocket Server running on port {port}...")
-        await asyncio.Future()  # run forever
+    app = web.Application()
+    app.router.add_get("/ws", websocket_handler)
+    app.router.add_get("/poll", poll_handler)
+    app.router.add_get("/metrics", metrics_handler)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+    print(f"Server running on port {port}")
+    print(f"  WebSocket : ws://localhost:{port}/ws")
+    print(f"  HTTP poll : http://localhost:{port}/poll")
+    print(f"  Metrics   : http://localhost:{port}/metrics")
+    await asyncio.Future()
 
 if __name__ == "__main__":
     asyncio.run(main())

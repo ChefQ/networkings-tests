@@ -1,2 +1,5 @@
 # Required for both the WebSocket server and client
 websockets
+aiohttp
+requests
+psutil

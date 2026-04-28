@@ -8,7 +8,7 @@ async def receive_messages(websocket):
 async def connect_to_cloud():
     # Replace this with YOUR actual Render URL.
     # Notice we change "https://" to "wss://"
-    uri = "wss://my-python-websocket-test.onrender.com"
+    uri = "wss://socket-polling-hybrid.com"
 
     print(f"Attempting to connect to {uri}...")
     print("Type your messages and press Enter to send. Type !END! to quit.")
