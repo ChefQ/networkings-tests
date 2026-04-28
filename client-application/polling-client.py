@@ -1,7 +1,7 @@
 import threading
 import requests
 
-BASE_URL = "https://socket-polling-hybrid.com"
+BASE_URL = "https://socket-polling-hybrid.onrender.com"
 POLL_URL = f"{BASE_URL}/poll"
 METRICS_URL = f"{BASE_URL}/metrics"
 INTERVAL = 2  # seconds between polls
